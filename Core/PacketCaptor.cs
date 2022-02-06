@@ -17,6 +17,7 @@ namespace DotNetPacketCaptor.Core
         private bool _isRunning;
         private uint _packetId;
         private DateTime _startTime;
+        private ILiveDevice _selectedDevice;
 
         #endregion
 
@@ -36,7 +37,7 @@ namespace DotNetPacketCaptor.Core
         public bool IsRunning
         {
             get => _isRunning;
-            set
+            private set
             {
                 _isRunning = value;
                 OnPropertyChanged();
@@ -44,7 +45,6 @@ namespace DotNetPacketCaptor.Core
         }
 
         public DeviceConfiguration Config { get; set; } = null;
-        public ILiveDevice SelectedDevice { get; private set; }
 
         #endregion
 
@@ -65,7 +65,7 @@ namespace DotNetPacketCaptor.Core
         {
             if (index >= 0 && index < Instance.Count)
             {
-                SelectedDevice = Instance[index];
+                _selectedDevice = Instance[index];
                 StartCapture();
             }
             else
@@ -74,10 +74,10 @@ namespace DotNetPacketCaptor.Core
 
         public void StopCapture()
         {
-            if (SelectedDevice != null && IsRunning)
+            if (_selectedDevice != null && IsRunning)
             {
-                SelectedDevice.StopCapture();
-                SelectedDevice.Close();
+                _selectedDevice.StopCapture();
+                _selectedDevice.Close();
                 IsRunning = false;
                 CaptureStop?.Invoke(this, null);
             }
@@ -103,11 +103,11 @@ namespace DotNetPacketCaptor.Core
 
         private void StartCapture()
         {
-            if (SelectedDevice != null)
+            if (_selectedDevice != null)
             {
                 // Events register. In case register repeatedly happens
-                SelectedDevice.OnPacketArrival -= OnPacketArrival;
-                SelectedDevice.OnPacketArrival += OnPacketArrival;
+                _selectedDevice.OnPacketArrival -= OnPacketArrival;
+                _selectedDevice.OnPacketArrival += OnPacketArrival;
                 // Parameter initialization
                 _packetId = 1;
                 _startTime = DateTime.Now;
@@ -117,12 +117,12 @@ namespace DotNetPacketCaptor.Core
                 // Waiting for GC clearing previous collection packets
                 Thread.Sleep(100);
                 if (Config != null)
-                    SelectedDevice.Open(Config);
+                    _selectedDevice.Open(Config);
                 else
                     // No configuration
-                    SelectedDevice.Open();
+                    _selectedDevice.Open();
                 // Non-blocking invoking
-                SelectedDevice.StartCapture();
+                _selectedDevice.StartCapture();
                 IsRunning = true;
                 CaptureStart?.Invoke(this, null);
             }

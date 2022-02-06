@@ -12,7 +12,7 @@ namespace DotNetPacketCaptor.Core
         {
             if (singleFilterItem == "")
                 return true;
-            var regex = new Regex(@"^[A-Z][a-z]+\s*=\s*[a-z0-9\%\:\.\/\\]+$");
+            var regex = new Regex(@"^[A-Z][a-zA-Z]+\s*=\s*[a-z0-9\%\:\.\/\\]+$");
             /*
              * Don't use * operator because of the case where main string will be matched although there is nothing in front of '='
              * Such as the main string '=sad' and the pattern '[a-z]*\s?=\s?[a-z]+', we can get the result: Successful match!

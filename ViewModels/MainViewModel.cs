@@ -89,9 +89,11 @@ namespace DotNetPacketCaptor.ViewModels
                 OnPropertyChanged();
             }
         }
-        
+
         public PacketFilter Filter { get; }
 
+        public DeviceConfiguration Config { get; set; }
+        
         public RelayCommand<int> StartCaptureCommand { get; }
         public RelayCommand StopCaptureCommand { get; }
         public RelayCommand<int> RestartCaptureCommand { get; }
@@ -114,7 +116,7 @@ namespace DotNetPacketCaptor.ViewModels
             // Get that default view of packet collection
             CollectionView = CollectionViewSource.GetDefaultView(_captor.PacketCollection);
             Filter = new PacketFilter();
-            Modes = new List<string> { "Promiscuous" };
+            Modes = new List<string> {"Promiscuous"};
             StartCaptureCommand = new RelayCommand<int>(StartCapture);
             StopCaptureCommand = new RelayCommand(StopCapture);
             RestartCaptureCommand = new RelayCommand<int>(RestartCapture);
@@ -130,6 +132,8 @@ namespace DotNetPacketCaptor.ViewModels
 
         private void StartCapture(int index)
         {
+            if (Config != null)
+                _captor.Config = Config;
             _captor.StartCapture(index);
             // Refresh collection view
             CollectionView.Refresh();
@@ -155,7 +159,6 @@ namespace DotNetPacketCaptor.ViewModels
             _keyValuePairs.Clear();
             if (filterString == "")
                 return;
-
 
 
             /* Parse parameter and add new conditions into CollectionView.Filter */
@@ -187,7 +190,7 @@ namespace DotNetPacketCaptor.ViewModels
                     byte b = bytes[i - 1];
                     sb2.Append(Convert.ToString(b, 16).PadLeft(2, '0') + " ");
                     if (b >= 33 && b <= 126)
-                        sb3.Append(((char)b).ToString() + " ");
+                        sb3.Append(((char) b).ToString() + " ");
                     else
                         sb3.Append("· ");
                     if (i % 8 == 0 && i % 16 != 0 && i != 0)
@@ -201,6 +204,7 @@ namespace DotNetPacketCaptor.ViewModels
                         sb3.AppendLine();
                     }
                 }
+
                 ColNumber = sb1.ToString();
                 ColRaw = sb2.ToString();
                 ColAscii = sb3.ToString();
@@ -233,7 +237,6 @@ namespace DotNetPacketCaptor.ViewModels
             var window = new PacketDetailWindow(viewModel)
             {
                 Title = "[Packet-" + packet.Number + "]",
-                
             };
             window.Show();
             _windows.Add(window);
@@ -242,13 +245,14 @@ namespace DotNetPacketCaptor.ViewModels
         private void CaptorRunningStateChanged(object sender, PropertyChangedEventArgs e)
         {
             IsCaptorRunning = _captor.IsRunning;
-            if (!IsCaptorRunning) 
+            if (!IsCaptorRunning)
                 return;
             foreach (var window in _windows)
             {
                 window.Title += " [no capture file]";
                 _obsoleteWindows.Add(window);
             }
+
             _windows.Clear();
         }
 
