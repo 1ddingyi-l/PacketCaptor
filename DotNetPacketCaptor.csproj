@@ -64,6 +64,7 @@
     <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>packages\System.Runtime.CompilerServices.Unsafe.6.0.2-mauipre.1.22054.8\lib\net461\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
     </Reference>
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Text.Encoding.CodePages, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>packages\System.Text.Encoding.CodePages.6.0.2-mauipre.1.22054.8\lib\net461\System.Text.Encoding.CodePages.dll</HintPath>
     </Reference>
@@ -84,8 +85,10 @@
     <Compile Include="Core\PacketCaptor.cs" />
     <Compile Include="Core\PacketFilter.cs" />
     <Compile Include="Core\RelayCommand.cs" />
+    <Compile Include="Ext\CollectionViewSourceExtension.cs" />
     <Compile Include="Models\BooleanConverter.cs" />
     <Compile Include="Models\DotNetRawPacket.cs" />
+    <Compile Include="Models\PacketInfo.cs" />
     <Compile Include="Properties\Annotations.cs" />
     <Compile Include="Utils\MessageHelper.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />

@@ -26,13 +26,13 @@ namespace DotNetPacketCaptor
             mv.ShowPacketDetailWindowCommand.Execute(LvPacketList.SelectedItem);
         }
 
-        private void OnGetFilterInput(object sender, KeyEventArgs e)
+        private void CheckFormat(object sender, KeyEventArgs e)
         {
             if (!(sender is TextBox tb) || !(DataContext is MainViewModel mv))
                 return;
             var stringItems = tb.Text.Split('&');
             var filter = mv.Filter; 
-            if (stringItems.Any(stringItem => !filter.CheckValidity(stringItem)))
+            if (stringItems.Any(stringItem => !filter.CheckValidity(stringItem.Trim())))
             {
                 filter.CanFilter = false;
                 tb.Background = (SolidColorBrush)new BrushConverter().ConvertFrom("#ffa39e");

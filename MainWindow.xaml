@@ -41,9 +41,11 @@
               Margin="0 5 0 5">
             <MenuItem Header="File">
                 <MenuItem Header="Open"
-                          Command="{Binding GetPacketsFromFileCommand}"/>
+                          Command="{Binding GetPacketsFromFileCommand}"
+                          IsEnabled="{Binding IsCaptorRunning, Converter={StaticResource BooleanConverter}}"/>
                 <MenuItem Header="Save"
-                          Command="{Binding SavePacketsToFileCommand}"/>
+                          Command="{Binding SavePacketsToFileCommand}"
+                          IsEnabled="{Binding IsCaptorRunning, Converter={StaticResource BooleanConverter}}"/>
             </MenuItem>
         </Menu>
         <StackPanel Grid.Row="1"
@@ -91,7 +93,7 @@
                      Width="228"
                      VerticalContentAlignment="Center"
                      FontSize="16"
-                     PreviewKeyUp="OnGetFilterInput"
+                     PreviewKeyUp="CheckFormat"
                      FontFamily="Times New Roman">
                 <TextBox.InputBindings>
                     <KeyBinding Key="Enter"
@@ -161,8 +163,8 @@
                     <GridViewColumn Header="Protocol"
                                     Width="100"
                                     DisplayMemberBinding="{Binding (model:DotNetRawPacket.Protocol)}"/>
-                    <GridViewColumn Header="PacketLength"
-                                    Width="150"
+                    <GridViewColumn Header="PacketBytesCaptured"
+                                    Width="188"
                                     DisplayMemberBinding="{Binding (model:DotNetRawPacket.PacketBytesCaptured)}"/>
                     <GridViewColumn Header="Summary"
                                     Width="1000"

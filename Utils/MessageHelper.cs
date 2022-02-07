@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Windows.Forms.VisualStyles;
 
 namespace DotNetPacketCaptor.Utils
 {
@@ -13,6 +14,9 @@ namespace DotNetPacketCaptor.Utils
         public static MessageBoxResult ShowCustomizedWarning(string content, MessageBoxButton button, string title = "Warning")
             => MessageBox.Show(content, title, button, MessageBoxImage.Warning);
 
+        public static void ShowPopup(string content, string title = "Info")
+            => MessageBox.Show(content, title, MessageBoxButton.OK, MessageBoxImage.Information);
+        
         public static void ShowTest(string content, string title = "Test")
             => MessageBox.Show(content, title);
     }
