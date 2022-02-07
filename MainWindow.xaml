@@ -8,16 +8,20 @@
         xmlns:viewModel="clr-namespace:DotNetPacketCaptor.ViewModels"
         xmlns:behaviors="http://schemas.microsoft.com/xaml/behaviors"
         mc:Ignorable="d"
-        Title="DotNetPacketCaptor" 
-        
-        Height="600" Width="950"
-        MinHeight="600" MinWidth="950"
+        Title="{Binding Title}"
+        Height="600" Width="985"
+        MinHeight="600" MinWidth="985"
         WindowStartupLocation="CenterScreen">
     <Window.DataContext>
         <viewModel:MainViewModel/>
     </Window.DataContext>
     <Window.Resources>
         <model:BooleanConverter x:Key="BooleanConverter"/>
+        <Style TargetType="MenuItem">
+            <Setter Property="FontFamily" Value="Times New Roman"/>
+            <Setter Property="FontSize" Value="16"/>
+            <Setter Property="Margin" Value="5 0 5 0"/>
+        </Style>
     </Window.Resources>
     <behaviors:Interaction.Triggers>
         <behaviors:EventTrigger EventName="Closing" SourceObject="{Binding ElementName=MainWin}">
@@ -33,15 +37,19 @@
             <RowDefinition/>
         </Grid.RowDefinitions>
         <Menu Grid.Row="0"
-              Background="White">
+              Background="White"
+              Margin="0 5 0 5">
             <MenuItem Header="File">
-                <MenuItem Header="Open"/>
-                <MenuItem Header="Save"/>
+                <MenuItem Header="Open"
+                          Command="{Binding GetPacketsFromFileCommand}"/>
+                <MenuItem Header="Save"
+                          Command="{Binding SavePacketsToFileCommand}"/>
             </MenuItem>
         </Menu>
         <StackPanel Grid.Row="1"
                     Orientation="Horizontal"
-                    Background="#f0f0f0f0">
+                    Background="#f0f0f0f0"
+                    Margin="0 0 0 5">
             <Button Content="Start"
                     Command="{Binding StartCaptureCommand}"
                     Click="StartCapture"
@@ -64,7 +72,7 @@
                     FontFamily="Times New Roman"
                     Margin="5 0 10 0"/>
             <ComboBox Name="CbDeviceSelection"
-                      Width="233"
+                      Width="288"
                       ItemsSource="{Binding DeviceList}"
                       VerticalContentAlignment="Center"
                       HorizontalContentAlignment="Center"
@@ -80,7 +88,7 @@
                 </ComboBox.ItemTemplate>
             </ComboBox>
             <TextBox x:Name="TbFilter" 
-                     Width="258"
+                     Width="228"
                      VerticalContentAlignment="Center"
                      FontSize="16"
                      PreviewKeyUp="OnGetFilterInput"

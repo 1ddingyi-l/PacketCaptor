@@ -5,18 +5,17 @@ using SharpPcap.LibPcap;
 
 namespace DotNetPacketCaptor.Models
 {
+    [Serializable]
     public class DotNetRawPacket
     {
-        private readonly byte _layers = 1;
-
-        private readonly ulong _packetId;
-
         public byte[] Bytes { get; }
 
-        public byte Layers => _layers;
+        public byte Layers { get; } = 1;
 
-        public ulong Number => _packetId;
+        public ulong Number { get; }
 
+        public RawCapture Raw { get; }
+        
         public double ArrivalTime { get; }
         
         public uint PacketBytesOnLine { get; }
@@ -31,21 +30,21 @@ namespace DotNetPacketCaptor.Models
 
         public string DestinationPhysicalAddress { get; }
 
-        public IPv4Packet NetworkIpV4Packet { get; } = null;
+        public IPv4Packet NetworkIpV4Packet { get; }
 
-        public IPv6Packet NetworkIpV6Packet { get; } = null;
+        public IPv6Packet NetworkIpV6Packet { get; }
 
-        public ArpPacket NetworkArpPacket { get; } = null;
+        public ArpPacket NetworkArpPacket { get; }
 
-        public TcpPacket NetworkTcpPacket { get; } = null;
+        public TcpPacket NetworkTcpPacket { get; }
 
-        public UdpPacket NetworkUdpPacket { get; } = null;
+        public UdpPacket NetworkUdpPacket { get; }
 
-        public IcmpV4Packet NetworkIcmpV4Packet { get; } = null;
+        public IcmpV4Packet NetworkIcmpV4Packet { get; }
 
-        public IcmpV6Packet NetworkIcmpV6Packet { get; } = null;
+        public IcmpV6Packet NetworkIcmpV6Packet { get; }
 
-        public IgmpV2Packet NetworkIgmpV2Packet { get; } = null;
+        public IgmpV2Packet NetworkIgmpV2Packet { get; }
 
         public string Protocol { get; }
 
@@ -60,15 +59,16 @@ namespace DotNetPacketCaptor.Models
             get
             {
                 if (LinkLayerPacket.HasPayloadPacket) return PayloadType.Packet;
-                else if (LinkLayerPacket.HasPayloadData) return PayloadType.Bytes;
-                else return PayloadType.None;
+                if (LinkLayerPacket.HasPayloadData) return PayloadType.Bytes;
+                return PayloadType.None;
             }
         }
 
         public DotNetRawPacket(PacketCapture packetCapture, ulong packetId, DateTime startTime)
         {
             var rawCapture = packetCapture.GetPacket();
-            _packetId = packetId;
+            Raw = rawCapture;
+            Number = packetId;
             Bytes = rawCapture.Data;
             var dt = rawCapture.Timeval.Date.ToLocalTime();
             ArrivalTime = (dt - startTime).TotalSeconds;
@@ -85,7 +85,7 @@ namespace DotNetPacketCaptor.Models
                 if (linkLayerPacket.HasPayloadPacket)  // Payload packet
                 {
                     linkLayerPacket = linkLayerPacket.PayloadPacket;
-                    _layers++;
+                    Layers++;
                 }
                 else  // Payload data
                     break;
@@ -97,7 +97,7 @@ namespace DotNetPacketCaptor.Models
                 var ethernetPacket = (EthernetPacket)LinkLayerPacket;
                 SourcePhysicalAddress = ethernetPacket.SourceHardwareAddress.ToString();
                 DestinationPhysicalAddress = ethernetPacket.DestinationHardwareAddress.ToString();
-                if (_layers == 1)  // Only link layer, broadcast frame
+                if (Layers == 1)  // Only link layer, broadcast frame
                 {
                     Source = ethernetPacket.SourceHardwareAddress.ToString();
                     Destination = "broadcast";
@@ -105,7 +105,8 @@ namespace DotNetPacketCaptor.Models
                     Info = "Ethernet II";
                     return;
                 }
-                else if (_layers == 2)  // Only network layer, such as Arp
+
+                if (Layers == 2)  // Only network layer, such as Arp
                 {
                     if (ethernetPacket.Type == EthernetType.Arp)
                     {
@@ -128,25 +129,24 @@ namespace DotNetPacketCaptor.Models
                         }
                         return;
                     }
-                    else
-                        throw new NotImplementedException("Can't identify the kind of this packet");
+
+                    throw new NotImplementedException("Can't identify the kind of this packet");
                 }
-                else  // _layers == 3, link layer, network layer, transport layer, application layer(excluded)
+
+                switch (ethernetPacket.Type)
                 {
-                    switch (ethernetPacket.Type)
-                    {
-                        case EthernetType.IPv4:
-                            NetworkIpV4Packet = ethernetPacket.PayloadPacket as IPv4Packet;
-                            if (NetworkIpV4Packet == null)
-                                throw new NullReferenceException();
-                            Source = NetworkIpV4Packet.SourceAddress.ToString();
-                            Destination = NetworkIpV4Packet.DestinationAddress.ToString();
-                            if (NetworkIpV4Packet.Protocol == ProtocolType.Tcp)
-                            {
-                                NetworkTcpPacket = NetworkIpV4Packet.PayloadPacket as TcpPacket;
-                                Protocol = ProtocolType.Tcp.ToString();
-                                Info = NetworkTcpPacket.ToString();
-                                /*
+                    case EthernetType.IPv4:
+                        NetworkIpV4Packet = ethernetPacket.PayloadPacket as IPv4Packet;
+                        if (NetworkIpV4Packet == null)
+                            throw new NullReferenceException();
+                        Source = NetworkIpV4Packet.SourceAddress.ToString();
+                        Destination = NetworkIpV4Packet.DestinationAddress.ToString();
+                        if (NetworkIpV4Packet.Protocol == ProtocolType.Tcp)
+                        {
+                            NetworkTcpPacket = NetworkIpV4Packet.PayloadPacket as TcpPacket;
+                            Protocol = ProtocolType.Tcp.ToString();
+                            Info = NetworkTcpPacket.ToString();
+                            /*
                                  *  the first byte
                                  *    --------------------------------------
                                  *    |  Source port  |  Destination port  |
@@ -165,82 +165,79 @@ namespace DotNetPacketCaptor.Models
                                  *    --------------------------------------
                                  *
                                  */
-                                return;
-                            }
-                            else if (NetworkIpV4Packet.Protocol == ProtocolType.Udp)
-                            {
-                                NetworkUdpPacket = NetworkIpV4Packet.PayloadPacket as UdpPacket;
-                                Protocol = ProtocolType.Udp.ToString();
-                                Info = NetworkUdpPacket.ToString();
-                                return;
-                            }
-                            else if (NetworkIpV4Packet.Protocol == ProtocolType.Icmp)  // IcmpV4
-                            {
-                                NetworkIcmpV4Packet = NetworkIpV4Packet.PayloadPacket as IcmpV4Packet;
-                                Protocol = ProtocolType.Icmp.ToString();
-                                Info = NetworkIcmpV4Packet.ToString();
-                                return;
-                            }
-                            else if (NetworkIpV4Packet.Protocol == ProtocolType.IcmpV6)
-                            {
-                                NetworkIcmpV6Packet = NetworkIpV4Packet.PayloadPacket as IcmpV6Packet;
-                                Protocol = ProtocolType.IcmpV6.ToString();
-                                Info = NetworkIcmpV6Packet.ToString();
-                                return;
-                            }
-                            else if (NetworkIpV4Packet.Protocol == ProtocolType.Igmp)
-                            {
-                                NetworkIgmpV2Packet = NetworkIpV4Packet.PayloadPacket as IgmpV2Packet;
-                                Protocol = ProtocolType.Igmp.ToString();
-                                Info = NetworkIgmpV2Packet.ToString();
-                                return;
-                            }
-                            else
-                                break;
-                        case EthernetType.IPv6:
-                            NetworkIpV6Packet = ethernetPacket.PayloadPacket as IPv6Packet;
-                            Source = NetworkIpV6Packet.SourceAddress.ToString();
-                            Destination = NetworkIpV6Packet.DestinationAddress.ToString();
-                            if (NetworkIpV6Packet.Protocol == ProtocolType.Tcp)
-                            {
-                                NetworkTcpPacket = NetworkIpV6Packet.PayloadPacket as TcpPacket;
-                                Protocol = ProtocolType.Tcp.ToString();
-                                Info = NetworkTcpPacket.ToString();
-                                return;
-                            }
-                            else if (NetworkIpV6Packet.Protocol == ProtocolType.Udp)
-                            {
-                                NetworkUdpPacket = NetworkIpV6Packet.PayloadPacket as UdpPacket;
-                                Protocol = ProtocolType.Udp.ToString();
-                                Info = NetworkUdpPacket.ToString();
-                                return;
-                            }
-                            else if (NetworkIpV6Packet.Protocol == ProtocolType.Icmp)  // IcmpV4
-                            {
-                                NetworkIcmpV4Packet = NetworkIpV6Packet.PayloadPacket as IcmpV4Packet;
-                                Protocol = ProtocolType.Icmp.ToString();
-                                Info = NetworkIcmpV4Packet.ToString();
-                                return;
-                            }
-                            else if (NetworkIpV6Packet.Protocol == ProtocolType.IcmpV6)
-                            {
-                                NetworkIcmpV6Packet = NetworkIpV6Packet.PayloadPacket as IcmpV6Packet;
-                                Protocol = ProtocolType.IcmpV6.ToString();
-                                Info = NetworkIcmpV6Packet.ToString();
-                                return;
-                            }
-                            else if (NetworkIpV6Packet.Protocol == ProtocolType.Igmp)
-                            {
-                                NetworkIgmpV2Packet = NetworkIpV6Packet.PayloadPacket as IgmpV2Packet;
-                                Protocol = ProtocolType.Igmp.ToString();
-                                Info = NetworkIgmpV2Packet.ToString();
-                                return;
-                            }
-                            else
-                                break;
-                        default:
+                            return;
+                        }
+                        else if (NetworkIpV4Packet.Protocol == ProtocolType.Udp)
+                        {
+                            NetworkUdpPacket = NetworkIpV4Packet.PayloadPacket as UdpPacket;
+                            Protocol = ProtocolType.Udp.ToString();
+                            Info = NetworkUdpPacket.ToString();
+                            return;
+                        }
+                        else if (NetworkIpV4Packet.Protocol == ProtocolType.Icmp)  // IcmpV4
+                        {
+                            NetworkIcmpV4Packet = NetworkIpV4Packet.PayloadPacket as IcmpV4Packet;
+                            Protocol = ProtocolType.Icmp.ToString();
+                            Info = NetworkIcmpV4Packet.ToString();
+                            return;
+                        }
+                        else if (NetworkIpV4Packet.Protocol == ProtocolType.IcmpV6)
+                        {
+                            NetworkIcmpV6Packet = NetworkIpV4Packet.PayloadPacket as IcmpV6Packet;
+                            Protocol = ProtocolType.IcmpV6.ToString();
+                            Info = NetworkIcmpV6Packet.ToString();
+                            return;
+                        }
+                        else if (NetworkIpV4Packet.Protocol == ProtocolType.Igmp)
+                        {
+                            NetworkIgmpV2Packet = NetworkIpV4Packet.PayloadPacket as IgmpV2Packet;
+                            Protocol = ProtocolType.Igmp.ToString();
+                            Info = NetworkIgmpV2Packet.ToString();
+                            return;
+                        }
+                        else
                             break;
-                    }
+                    case EthernetType.IPv6:
+                        NetworkIpV6Packet = ethernetPacket.PayloadPacket as IPv6Packet;
+                        Source = NetworkIpV6Packet.SourceAddress.ToString();
+                        Destination = NetworkIpV6Packet.DestinationAddress.ToString();
+                        if (NetworkIpV6Packet.Protocol == ProtocolType.Tcp)
+                        {
+                            NetworkTcpPacket = NetworkIpV6Packet.PayloadPacket as TcpPacket;
+                            Protocol = ProtocolType.Tcp.ToString();
+                            Info = NetworkTcpPacket.ToString();
+                            return;
+                        }
+                        else if (NetworkIpV6Packet.Protocol == ProtocolType.Udp)
+                        {
+                            NetworkUdpPacket = NetworkIpV6Packet.PayloadPacket as UdpPacket;
+                            Protocol = ProtocolType.Udp.ToString();
+                            Info = NetworkUdpPacket.ToString();
+                            return;
+                        }
+                        else if (NetworkIpV6Packet.Protocol == ProtocolType.Icmp)  // IcmpV4
+                        {
+                            NetworkIcmpV4Packet = NetworkIpV6Packet.PayloadPacket as IcmpV4Packet;
+                            Protocol = ProtocolType.Icmp.ToString();
+                            Info = NetworkIcmpV4Packet.ToString();
+                            return;
+                        }
+                        else if (NetworkIpV6Packet.Protocol == ProtocolType.IcmpV6)
+                        {
+                            NetworkIcmpV6Packet = NetworkIpV6Packet.PayloadPacket as IcmpV6Packet;
+                            Protocol = ProtocolType.IcmpV6.ToString();
+                            Info = NetworkIcmpV6Packet.ToString();
+                            return;
+                        }
+                        else if (NetworkIpV6Packet.Protocol == ProtocolType.Igmp)
+                        {
+                            NetworkIgmpV2Packet = NetworkIpV6Packet.PayloadPacket as IgmpV2Packet;
+                            Protocol = ProtocolType.Igmp.ToString();
+                            Info = NetworkIgmpV2Packet.ToString();
+                            return;
+                        }
+                        else
+                            break;
                 }
             }
             else if (type == typeof(NullPacket))
@@ -330,8 +327,6 @@ namespace DotNetPacketCaptor.Models
                         }
                         else
                             break;
-                    default:
-                        break;
                 }
             }
             throw new NotImplementedException("Can't identify the kind of this packet");

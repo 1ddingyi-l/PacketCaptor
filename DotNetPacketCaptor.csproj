@@ -67,6 +67,7 @@
     <Reference Include="System.Text.Encoding.CodePages, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <HintPath>packages\System.Text.Encoding.CodePages.6.0.2-mauipre.1.22054.8\lib\net461\System.Text.Encoding.CodePages.dll</HintPath>
     </Reference>
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xaml">
       <RequiredTargetFramework>4.0</RequiredTargetFramework>
@@ -86,6 +87,7 @@
     <Compile Include="Models\BooleanConverter.cs" />
     <Compile Include="Models\DotNetRawPacket.cs" />
     <Compile Include="Properties\Annotations.cs" />
+    <Compile Include="Utils\MessageHelper.cs" />
     <Compile Include="ViewModels\MainViewModel.cs" />
     <Compile Include="ViewModels\PacketDetailViewModel.cs" />
     <Compile Include="ViewModels\ViewModelBase.cs" />

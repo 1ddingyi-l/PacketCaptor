@@ -1,14 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.IO;
+using System.Runtime.Serialization.Formatters.Binary;
 using System.Text;
 using System.Threading;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Forms;
 using DotNetPacketCaptor.Core;
 using DotNetPacketCaptor.Models;
+using DotNetPacketCaptor.Utils;
 using DotNetPacketCaptor.Windows;
 using SharpPcap;
+using SharpPcap.LibPcap;
 
 namespace DotNetPacketCaptor.ViewModels
 {
@@ -19,9 +24,11 @@ namespace DotNetPacketCaptor.ViewModels
         private readonly PacketCaptor _captor;
         private readonly Dictionary<int, Predicate<object>> _keyValuePairs;
         private bool _isCaptorRunning;
+        private bool _hasUnsavedPackets;
         private string _colNumber;
         private string _colRaw;
         private string _colAscii;
+        private string _windowTitle;
         private readonly List<Window> _windows;
         private readonly List<Window> _obsoleteWindows;
 
@@ -90,9 +97,23 @@ namespace DotNetPacketCaptor.ViewModels
             }
         }
 
+        public string Title
+        {
+            get => _windowTitle;
+            private set
+            {
+                _windowTitle = value;
+                OnPropertyChanged();
+            }
+        }
+
         public PacketFilter Filter { get; }
 
         public DeviceConfiguration Config { get; set; }
+
+        #endregion
+        
+        #region commands
         
         public RelayCommand<int> StartCaptureCommand { get; }
         public RelayCommand StopCaptureCommand { get; }
@@ -101,8 +122,10 @@ namespace DotNetPacketCaptor.ViewModels
         public RelayCommand<DotNetRawPacket> ShowPacketDetailCommand { get; }
         public RelayCommand WindowClosingCommand { get; }
         public RelayCommand<DotNetRawPacket> ShowPacketDetailWindowCommand { get; }
+        public RelayCommand GetPacketsFromFileCommand { get; }
+        public RelayCommand SavePacketsToFileCommand { get; }
 
-        #endregion
+        #endregion        
 
         #region constructors
 
@@ -110,13 +133,18 @@ namespace DotNetPacketCaptor.ViewModels
         {
             _captor = new PacketCaptor();
             _captor.PropertyChanged += CaptorRunningStateChanged;
+            _captor.CaptureStart += CaptureStarting;
+            _captor.CaptureStop += CaptureStopped;
             _keyValuePairs = new Dictionary<int, Predicate<object>>();
             _windows = new List<Window>();
             _obsoleteWindows = new List<Window>();
+            _isCaptorRunning = false;
+            _hasUnsavedPackets = false;
             // Get that default view of packet collection
             CollectionView = CollectionViewSource.GetDefaultView(_captor.PacketCollection);
             Filter = new PacketFilter();
             Modes = new List<string> {"Promiscuous"};
+            Title = "DotNetPacketCaptor";
             StartCaptureCommand = new RelayCommand<int>(StartCapture);
             StopCaptureCommand = new RelayCommand(StopCapture);
             RestartCaptureCommand = new RelayCommand<int>(RestartCapture);
@@ -124,14 +152,40 @@ namespace DotNetPacketCaptor.ViewModels
             ShowPacketDetailCommand = new RelayCommand<DotNetRawPacket>(ShowPacketDetail);
             WindowClosingCommand = new RelayCommand(WindowClosing);
             ShowPacketDetailWindowCommand = new RelayCommand<DotNetRawPacket>(ShowPacketDetailWindow);
+            GetPacketsFromFileCommand = new RelayCommand(GetPacketsFromFile);
+            SavePacketsToFileCommand = new RelayCommand(SavePacketsToFile);
         }
 
         #endregion
 
-        #region private methods
+        #region command methods
 
         private void StartCapture(int index)
         {
+            if (_hasUnsavedPackets)
+            {
+                var result = MessageHelper.ShowCustomizedWarning(
+                    "You have packets unsaved.\nWould you like to save them before this action?",
+                    MessageBoxButton.YesNoCancel);
+                switch (result)
+                {
+                    // Save them and start a new capture
+                    case MessageBoxResult.Yes:
+                        SavePacketsToFileCommand.Execute(null);
+                        break;
+                    // Don't save them and start a new capture
+                    case MessageBoxResult.No:
+                        break;
+                    // Cancel this operation
+                    case MessageBoxResult.Cancel:
+                        return;
+                }
+            }
+            if (index == -1)
+            {
+                MessageHelper.ShowError("Please choose a network card before your starting capture");
+                return;
+            }
             if (Config != null)
                 _captor.Config = Config;
             _captor.StartCapture(index);
@@ -242,6 +296,42 @@ namespace DotNetPacketCaptor.ViewModels
             _windows.Add(window);
         }
 
+        private void GetPacketsFromFile()
+        {
+            var fileWindow = new OpenFileDialog()
+            {
+                Title = @"Select file path",
+                Filter = @"All files (*.*)|*.*"
+            };
+            if (fileWindow.ShowDialog() == DialogResult.OK)
+            {
+                var filePath = fileWindow.FileName;
+                var rawCollection = Deserializing<DotNetRawPacket>(filePath);
+                MessageHelper.ShowWarning("Done!");
+            }
+        }
+
+        private void SavePacketsToFile()
+        {
+            var fileWindow = new SaveFileDialog()
+            {
+                Title = @"Select file path",
+                Filter = @"All files (*.*)|*.*"
+            };
+            if (fileWindow.ShowDialog() != DialogResult.OK) 
+                return;
+            var filePath = fileWindow.FileName;
+            var fs = File.Create(filePath);
+            var ms = new MemoryStream();
+            fs.CopyTo(ms);
+            ms.ToArray();
+            MessageHelper.ShowTest("Done!");
+        }
+        
+        #endregion
+        
+        #region event handler
+
         private void CaptorRunningStateChanged(object sender, PropertyChangedEventArgs e)
         {
             IsCaptorRunning = _captor.IsRunning;
@@ -256,6 +346,40 @@ namespace DotNetPacketCaptor.ViewModels
             _windows.Clear();
         }
 
+        private void CaptureStopped(object sender, EventArgs e)
+        {
+            if (CollectionView.IsEmpty) 
+                return;
+            _hasUnsavedPackets = true;
+            Title += "*";
+        }
+
+        private void CaptureStarting(object sender, EventArgs e)
+        {
+            if (Title[Title.Length - 1] == '*')
+                Title = Title.Remove(Title.Length - 1, 1);
+        }
+        
+        #endregion
+        
+        #region private methods
+
+        private void Serializing<T>(string filePath, IReadOnlyCollection<T> collectionToBeSerialized)
+        {
+            var fs = File.Create(filePath);
+            var bf = new BinaryFormatter();
+            bf.Serialize(fs, collectionToBeSerialized);
+            fs.Close();
+        }
+
+        private IReadOnlyCollection<T> Deserializing<T>(string filePath)
+        {
+            var fs = File.Create(filePath);
+            var bf = new BinaryFormatter();
+            var collection = bf.Deserialize(fs);
+            return collection as IReadOnlyCollection<T>;
+        }
+        
         #endregion
     }
 }

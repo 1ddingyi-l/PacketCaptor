@@ -44,7 +44,7 @@ namespace DotNetPacketCaptor.Core
             }
         }
 
-        public DeviceConfiguration Config { get; set; } = null;
+        public DeviceConfiguration Config { get; set; }
 
         #endregion
 
@@ -98,9 +98,6 @@ namespace DotNetPacketCaptor.Core
 
         #region private methods
 
-        private void OnPropertyChanged([CallerMemberName] string name = "")
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
-
         private void StartCapture()
         {
             if (_selectedDevice != null)
@@ -124,12 +121,17 @@ namespace DotNetPacketCaptor.Core
                 // Non-blocking invoking
                 _selectedDevice.StartCapture();
                 IsRunning = true;
+                // Firing event
                 CaptureStart?.Invoke(this, null);
             }
             else
                 throw new NullReferenceException();
         }
 
+        #endregion
+        
+        #region event handler
+        
         private void OnPacketArrival(object sender, PacketCapture e)
         {
             var packet = new DotNetRawPacket(e, _packetId++, _startTime);
@@ -142,7 +144,10 @@ namespace DotNetPacketCaptor.Core
             Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Background,
                 new Action(() => { PacketCollection.Add(packet); }));
         }
-
+        
+        private void OnPropertyChanged([CallerMemberName] string name = "")
+            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+        
         #endregion
     }
 }
