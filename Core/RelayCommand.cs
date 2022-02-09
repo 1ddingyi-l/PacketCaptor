@@ -44,6 +44,7 @@ namespace DotNetPacketCaptor.Core
         }
     }
     
+    // Non-parameter command
     public class RelayCommand : ICommand
     {
         private readonly Func<bool> _canExecute;

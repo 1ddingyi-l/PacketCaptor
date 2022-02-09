@@ -2,13 +2,15 @@
 {
     public class PacketDetailViewModel
     {
-        public string ColNumber { get; set; }
-        public string ColRaw { get; set; }
-        public string ColAscii { get; set; }
+        public string ColNumber { get; }
+        public string ColRaw { get; }
+        public string ColAscii { get; }
 
-        public PacketDetailViewModel()
+        public PacketDetailViewModel(string colNumber, string colRaw, string colAscii)
         {
-            
+            ColNumber = colNumber;
+            ColRaw = colRaw;
+            ColAscii = colAscii;
         }
     }
 }

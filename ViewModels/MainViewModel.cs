@@ -259,7 +259,7 @@ namespace DotNetPacketCaptor.ViewModels
                     sb1.AppendLine(Convert.ToString(i, 16).PadLeft(4, '0'));
                 for (var i = 1; i <= bytes.Length; i++)
                 {
-                    byte b = bytes[i - 1];
+                    var b = bytes[i - 1];
                     sb2.Append(Convert.ToString(b, 16).PadLeft(2, '0') + " ");
                     if (b >= 33 && b <= 126)
                         sb3.Append(((char) b).ToString() + " ");
@@ -301,12 +301,7 @@ namespace DotNetPacketCaptor.ViewModels
 
         private void ShowPacketDetailWindow(DotNetRawPacket packet)
         {
-            var viewModel = new PacketDetailViewModel()
-            {
-                ColNumber = ColNumber,
-                ColRaw = ColRaw,
-                ColAscii = ColAscii
-            };
+            var viewModel = new PacketDetailViewModel(ColNumber, ColRaw, ColAscii);
             var window = new PacketDetailWindow(viewModel)
             {
                 Title = "[Packet-" + packet.Number + "]",
